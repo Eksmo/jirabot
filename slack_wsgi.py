@@ -49,13 +49,23 @@ def passes_filter(commit_line):
 def application(request):
     if not is_slack_token_valid(request):
         return BadRequest('Invalid slack token provided')
-    try:
-        tag = request.form.get('text')
-    except Exception as e:
+    text = request.form['text']
+    if not text:
         return Response(u'Invoke slash command with project ID', status=500)
+    args = text.split(' ')
+    tag = args[0]
+    if len(args) == 2:
+        from_branch = 'master@{1 week ago}'
+        to_branch = 'master'
+    elif len(args) == 3:
+        from_branch = args[1]
+        to_branch = args[2]
+    else:
+        from_branch = 'master'
+        to_branch = 'develop'
 
     try:
-        context = get_release_info(from_branch='master', to_branch='develop', tag=tag)
+        context = get_release_info(from_branch=from_branch, to_branch=to_branch, tag=tag)
         attachment = get_slack_json(
             issue_by_status=context['issue_by_status'],
             untagged_commits=context['untagged_commits'],
